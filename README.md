@@ -10,3 +10,9 @@ pip install SpeechRecognition pywhatkit pyautogui webbrowser keyboard streamlit 
 streamlit run jarvis.py
 
 # if you guys want to build a exe of it contact me
+
+# demo of it
+![image](https://github.com/user-attachments/assets/18532600-7ac0-4f72-af6f-427080b03c93)
+
+![image](https://github.com/user-attachments/assets/ece5181e-8511-4c6d-bc3d-6a5656623c23)
+
