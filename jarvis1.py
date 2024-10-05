@@ -8,7 +8,7 @@ import webbrowser
 
 engine = pyttsx3.init()
 
-GOOGLE_API_KEY = "AIzaSyDZ6yDuQgQWxzc5Qq24Dpf_BkvcOjx_SP8"
+GOOGLE_API_KEY = "Enter your API key here"
 genai.configure(api_key=GOOGLE_API_KEY)
 
 geminiModel = genai.GenerativeModel("gemini-pro")
