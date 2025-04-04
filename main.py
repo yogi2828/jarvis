@@ -4,22 +4,25 @@ import subprocess
 import webbrowser
 import base64
 import threading
+import io
 
-import speech_recognition as sr
-import pywhatkit as kit
-import pyautogui
-import keyboard
 import streamlit as st
 import google.generativeai as genai
 import pyttsx3
 import pyjokes
+import pywhatkit as kit
+import pyautogui
+import keyboard
 
-# Initialize speech recognition and text-to-speech engine
-recognizer = sr.Recognizer()
+import speech_recognition as sr
+from streamlit_audiorec import st_audiorec  # pip install streamlit-audiorec
+
+# Initialize engines and API
 engine = pyttsx3.init()
+recognizer = sr.Recognizer()
 
-# Configure Gemini API (ensure you use a secure method for your API key)
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "AIzaSyDZ6yDuQgQWxzc5Qq24Dpf_BkvcOjx_SP8")
+# Configure Gemini API (ensure to secure your API key via env variables)
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "YOUR_GOOGLE_API_KEY")
 genai.configure(api_key=GOOGLE_API_KEY)
 geminiModel = genai.GenerativeModel("gemini-1.5-pro")
 chat = geminiModel.start_chat(history=[])
@@ -51,7 +54,7 @@ def image_to_base64(image_path: str) -> Any:
         st.error(f"Image file '{image_path}' not found.")
         return None
 
-# Sidebar and UI styling
+# Sidebar UI and styling
 st.sidebar.title('Help Menu')
 st.sidebar.write('This is JARVIS, your personal assistant. Here are some ways to use it:')
 st.sidebar.markdown("""
@@ -71,7 +74,7 @@ st.sidebar.markdown("""
 - Text-to-Speech Converter
 """)
 
-# Load images (adjust file paths as needed)
+# Load images (adjust paths as needed)
 background_image_path = os.path.join(os.path.dirname(__file__), "jarvis.png")
 logo_image_path = os.path.join(os.path.dirname(__file__), "jarvis1.jpg")
 background_image_base64 = image_to_base64(background_image_path)
@@ -119,11 +122,10 @@ if logo_image_base64:
 
 st.title('JARVIS - Your Personal Assistant')
 
-# Maintain chat history in session state
 if 'chat_history' not in st.session_state:
     st.session_state['chat_history'] = []
 
-# Dictionary for launching common desktop applications
+# Dictionary for launching desktop applications
 universal_app_names = {
     'word': 'winword.exe',
     'excel': 'excel.exe',
@@ -190,25 +192,28 @@ def open_website(url: str):
     except Exception as e:
         st.error(f"Error opening website {url}: {str(e)}")
 
+# Replace the microphone-based voice recognizer with streamlit-audiorec
 def take_voice_command() -> Any:
-    try:
-        with sr.Microphone() as source:
-            recognizer.adjust_for_ambient_noise(source)
-            st.info("Listening...")
-            audio = recognizer.listen(source, timeout=5)
-            st.info("Recognizing...")
-            command = recognizer.recognize_google(audio)
-            st.write(f"User said: {command}")
+    st.write("Record your voice command below:")
+    audio_bytes = st_audiorec()
+    if audio_bytes is None:
+        st.info("No audio recorded yet.")
+        return None
+    # Use SpeechRecognition on the recorded audio bytes
+    audio_file = io.BytesIO(audio_bytes)
+    with sr.AudioFile(audio_file) as source:
+        audio_data = recognizer.record(source)
+        try:
+            command = recognizer.recognize_google(audio_data)
+            st.write(f"Recognized: {command}")
             return command.lower()
-    except sr.UnknownValueError:
-        speak("Sorry, I didn't get that. Please repeat.")
-    except sr.RequestError:
-        speak("Sorry, I am having trouble connecting to the service.")
-    except Exception as e:
-        speak(f"An error occurred: {str(e)}")
+        except sr.UnknownValueError:
+            speak("Sorry, I didn't get that. Please repeat.")
+        except sr.RequestError:
+            speak("Sorry, I am having trouble connecting to the service.")
     return None
 
-# Main UI options
+# Main option selection UI
 option = st.selectbox('Select an Option:', [
     'Open Application',
     'Open Website',
@@ -250,12 +255,12 @@ elif option == 'Text-to-Speech':
         st.write("**JARVIS:** " + text)
 
 elif option == 'Voice Command':
-    st.write("Click the button and speak your command (local microphone required).")
-    if st.button("Start Voice Command"):
+    st.write("Use the recorder below to capture your voice command.")
+    if st.button("Process Voice Command"):
         command = take_voice_command()
         if command:
-            st.write("Recognized Command: " + command)
-            # Here you can add logic to process the voice command (e.g., open application, website, etc.)
+            st.write("Command: " + command)
+            # Example command processing:
             if "open" in command:
                 if "website" in command:
                     site = command.replace("open website", "").strip()
@@ -263,8 +268,6 @@ elif option == 'Voice Command':
                 else:
                     app = command.replace("open", "").strip()
                     open_application(app)
-            elif "close" in command:
-                st.write("Close command received (functionality can be added).")
             elif "play music" in command:
                 song = command.replace("play music", "").strip()
                 try:
@@ -272,8 +275,6 @@ elif option == 'Voice Command':
                     speak(f"Playing {song} on YouTube.")
                 except Exception as e:
                     speak(f"Error playing music: {str(e)}")
-            # Add further command handling as needed
+            # Extend with additional command processing as needed
 
-# Footer or extra UI elements can be added below
 st.write("JARVIS is ready at your service!")
-
